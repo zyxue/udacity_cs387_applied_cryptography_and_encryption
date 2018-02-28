@@ -74,7 +74,18 @@ def cipher_block_chaining(plaintext, key, init_vec, block_size, block_enc):
 
     ###############
     # START YOUR CODE HERE
-
+    cipher = []
+    for i in range(len(plaintext) / block_size + 1):
+        start = i * block_size
+        if start >= len(plaintext):
+            break
+        end = min(len(plaintext), (i+1) * block_size)
+        block = plaintext[start:end]
+        block = xor_encoder(init_vec, block)
+        _cipher = block_enc(block, key)
+        cipher.extend(_cipher)
+        init_vec = _cipher
+    return cipher
     # END OF YOUR CODE
     ####################
     
@@ -150,3 +161,7 @@ def pad_bits_append(small, size):
     # for the purpose of this exercise
     diff = max(0, size - len(small))
     return small + [0] * diff
+
+
+if __name__ == "__main__":
+    test()

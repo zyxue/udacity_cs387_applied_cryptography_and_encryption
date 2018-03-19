@@ -12,17 +12,37 @@ from copy import copy
 # Remember, this is NOT secure cryptology code
 # This is for fun and education.  Do not use this
 # to protect the classified files from Area 51
+def swap_blocks(block_a, block_b, cblock_a, cblock_b):
+    eblock_a = xor_bits(block_a, cblock_a)
+    eblock_b = xor_bits(block_b, cblock_b)
+    new_block_a = xor_bits(eblock_a, cblock_b)
+    new_block_b = xor_bits(eblock_b, cblock_a)
+    return new_block_a, new_block_b
+
 
 def find_collision(message):
+    """https://www.youtube.com/watch?v=QT0kt7_BBVI"""
     new_message = copy(message)
     ####################
     # START YOUR CODE HERE
+    #
+    block_size, block_enc, key, ctr = hash_inputs()
+    cipher = counter_mode(message, key, ctr, block_size, block_enc)
 
+    block_a = get_block(message, 0, block_size)
+    block_b = get_block(message, 1, block_size)
+    cblock_a = get_block(cipher, 0, block_size)
+    cblock_b = get_block(cipher, 1, block_size)
+
+    new_block_a, new_block_b = swap_blocks(block_a, block_b, cblock_a, cblock_b)
+
+    new_message[0: block_size] = new_block_a
+    new_message[block_size: 2 * block_size] = new_block_b
     return new_message
     # END OF YOUR CODE
     ####################
 
-def test():     
+def test():
     messages = ["Trust, but verify. -a signature phrase of President Ronald Reagan",
                 "The best way to find out if you can trust somebody is to trust them. (Ernest Hemingway)",
                 "If you reveal your secrets to the wind, you should not blame the wind for revealing them to the trees. (Khalil Gibran)",
@@ -34,6 +54,10 @@ def test():
         if not check(m, new_message):
             print "Failed to find a collision for '%s'" % m
             return False
+        else:
+            print('original message:\n\t{0}'.format(bits_to_string(m)))
+            print('another message with hash collision:\n\t{0}'.format(
+                bits_to_string(new_message)))
     return True
 
 from Crypto.Cipher import AES
@@ -41,7 +65,7 @@ from Crypto.Cipher import AES
 #################
 # Below are some functions
 # that you might find useful
-    
+
 BITS = ('0', '1')
 ASCII_BITS = 8
 
@@ -56,7 +80,7 @@ def pad_bits(bits, pad):
     """pads seq with leading 0s up to length pad"""
     assert len(bits) <= pad
     return [0] * (pad - len(bits)) + bits
-        
+
 def convert_to_bits(n):
     """converts an integer `n` to bit array"""
     result = []
@@ -70,7 +94,7 @@ def convert_to_bits(n):
 def string_to_bits(s):
     def chr_to_bit(c):
         return pad_bits(convert_to_bits(ord(c)), ASCII_BITS)
-    return [b for group in 
+    return [b for group in
             map(chr_to_bit, s)
             for b in group]
 
@@ -85,7 +109,7 @@ def list_to_string(p):
     return ''.join(p)
 
 def bits_to_string(b):
-    return ''.join([bits_to_char(b[i:i + ASCII_BITS]) 
+    return ''.join([bits_to_char(b[i:i + ASCII_BITS])
                     for i in range(0, len(b), ASCII_BITS)])
 
 def pad_bits_append(small, size):
@@ -103,7 +127,7 @@ def xor_bits(bits_a, bits_b):
 
 def bits_inc(bits):
     """modifies `bits` array in place to increment by one
-    
+
     wraps back to zero if `bits` is at its maximum value (each bit is 1)
     """
     # start at the least significant bit and work towards
@@ -117,7 +141,7 @@ def bits_inc(bits):
 
 def aes_encoder(block, key):
     block = pad_bits_append(block, len(key))
-    # the pycrypto library expects the key and block in 8 bit ascii 
+    # the pycrypto library expects the key and block in 8 bit ascii
     # encoded strings so we have to convert from the bit array
     block = bits_to_string(block)
     key = bits_to_string(key)
@@ -191,8 +215,12 @@ def check(message_a, message_b):
 
     if _is_same(message_a, message_b):
         return False
-    
+
     hash_a = counter_mode_hash(message_a)
     hash_b = counter_mode_hash(message_b)
 
     return _is_same(hash_a, hash_b)
+
+
+if __name__ == "__main__":
+    test()
